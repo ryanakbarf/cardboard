@@ -3,9 +3,6 @@ apply plugin: 'com.google.protobuf'
 
 android {
     compileSdk = 35
-    lintOptions {
-        abortOnError = false
-    }
     defaultConfig {
         // #gles3 #vulkan - You can reduce minSdkVersion down to 16 depending
         // on rendering APIs supported:
@@ -16,7 +13,6 @@ android {
         //
         // See the release notes for details.
         minSdkVersion = 26
-        targetSdkVersion = 35
         ndkVersion = "29.0.14206865"
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
         ndk {
@@ -55,8 +51,7 @@ android {
             ]
         }
         // Adds proto file and generated source files
-        main.java.srcDirs += "${protobuf.generatedFilesBaseDir}/main/javalite"
-        main.proto.srcDirs = ["${project.rootDir}/proto"]
+        main.proto.srcDirs = ["../proto"]
         main.proto.includes = ["cardboard_device.proto"]
     }
     namespace = 'com.google.cardboard.sdk'
@@ -64,6 +59,13 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+    }
+    lint {
+        abortOnError false
+        targetSdk 35
+    }
+    testOptions {
+        targetSdk 35
     }
 }
 

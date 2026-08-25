@@ -7,7 +7,7 @@ VERS_1.0 {
     *JavaVM*;
     JNI_OnLoad;
     *Unity*;
-    RenderAPI_Vulkan_OnPluginLoad;
+    RenderAPI_Vulkan_OnPluginLoad*;
 
   # Hide everything else.
   local:

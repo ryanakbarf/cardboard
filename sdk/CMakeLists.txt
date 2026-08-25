@@ -23,7 +23,8 @@ add_compile_options(-Wall -Wextra)
 # If these are already defined, the existing value is used, rather than the default here.
 option(CARDBOARDSDK_RENDERING_GLESv3 "Enable rendering with GLESv3" ON)
 option(CARDBOARDSDK_RENDERING_VULKAN "Enable rendering with Vulkan" ON)
-option(CARDBOARDSDK_UNITY_PLUGIN "Enable use as a Unity plugin" ON)
+option(CARDBOARDSDK_UNITY_PLUGIN "Enable use as a Unity plugin" OFF)
+set(CARDBOARDSDK_UNITY_PLUGIN OFF)
 
 # Standard Android dependencies
 find_library(ANDROID_LIB android)
@@ -58,6 +59,8 @@ file(GLOB screen_params_srcs "screen_params/android/*.cc")
 file(GLOB device_params_srcs "device_params/android/*.cc")
 # Rendering Sources
 file(GLOB rendering_opengl_srcs "rendering/opengl_*.cc")
+# Cardboard JNI Sources
+file(GLOB cardboard_jni_srcs "../java_api/src/main/jni/*.cc")
 
 if(CARDBOARDSDK_RENDERING_VULKAN)
     # #This is required for Vulkan rendering.
@@ -80,7 +83,7 @@ if(CARDBOARDSDK_UNITY_PLUGIN)
 endif()
 
 # Output binary
-add_library(GfxPluginCardboard SHARED
+add_library(cardboard_sdk_jni SHARED
     # Cardboard API sources.
     ${cardboard_v1_srcs}
     ${general_srcs}
@@ -92,30 +95,37 @@ add_library(GfxPluginCardboard SHARED
     ${screen_params_srcs}
     ${device_params_srcs}
     ${rendering_opengl_srcs}
-    # #vulkan This is required for Vulkan rendering. Remove the following two
-    # lines if Vulkan rendering is not needed.
-    ${rendering_vulkan_srcs}
-    ${rendering_vulkan_wrapper_srcs}
-    # Cardboard Unity JNI sources
-    ${cardboard_unity_jni_srcs}
-    # Cardboard Unity Wrapper sources
-    ${cardboard_xr_unity_srcs}
-    # Cardboard XR Provider for Unity sources
-    ${cardboard_xr_provider_srcs})
+    ${cardboard_jni_srcs}
+)
+
+if(CARDBOARDSDK_RENDERING_VULKAN)
+    target_sources(cardboard_sdk_jni PRIVATE
+        ${rendering_vulkan_srcs}
+        ${rendering_vulkan_wrapper_srcs}
+    )
+endif()
+
+if(CARDBOARDSDK_UNITY_PLUGIN)
+    target_sources(cardboard_sdk_jni PRIVATE
+        ${cardboard_unity_jni_srcs}
+        ${cardboard_xr_unity_srcs}
+        ${cardboard_xr_provider_srcs}
+    )
+endif()
 
 if(CARDBOARDSDK_UNITY_PLUGIN)
     # Includes
-    target_include_directories(GfxPluginCardboard
+    target_include_directories(cardboard_sdk_jni
         PRIVATE ../third_party/unity_plugin_api)
 endif()
 
 if(CARDBOARDSDK_RENDERING_VULKAN)
     # #This is required for Vulkan rendering.
-    target_compile_definitions(GfxPluginCardboard PUBLIC VK_USE_PLATFORM_ANDROID_KHR=1)
+    target_compile_definitions(cardboard_sdk_jni PUBLIC VK_USE_PLATFORM_ANDROID_KHR=1)
 endif()
 
 # Build
-target_link_libraries(GfxPluginCardboard
+target_link_libraries(cardboard_sdk_jni
     PUBLIC
     ${ANDROID_LIB}
     ${GLESv2_LIB}
@@ -123,7 +133,7 @@ target_link_libraries(GfxPluginCardboard
 )
 
 if(CARDBOARDSDK_RENDERING_VULKAN)
-    target_link_libraries(GfxPluginCardboard
+    target_link_libraries(cardboard_sdk_jni
         PUBLIC
         # #This is required for Vulkan rendering (it is required to load
         # libvulkan.so at runtime).
@@ -132,22 +142,16 @@ if(CARDBOARDSDK_RENDERING_VULKAN)
 endif()
 
 if(CARDBOARDSDK_RENDERING_GLESv3)
-    target_link_libraries(GfxPluginCardboard
+    target_link_libraries(cardboard_sdk_jni
         PUBLIC
         # #Library is only needed if OpenGL ES 3.0 support is desired.
         ${GLESv3_LIB}
     )
 endif()
 
-set_property(
-    TARGET GfxPluginCardboard
-    APPEND_STRING
-    PROPERTY
-        LINK_FLAGS
-        " -Wl,--version-script=\"${CMAKE_CURRENT_SOURCE_DIR}/cardboard_api.lds\""
-)
-set_property(
-    TARGET GfxPluginCardboard
-    APPEND
-    PROPERTY LINK_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/cardboard_api.lds"
-)
+# NOTE (vision_pro): The upstream cardboard_api.lds version script hides the
+# Java_* JNI symbols that the Java API (com.google.cardboard.sdk.*) requires
+# (e.g. Java_..._Initialize_nativeInitialize), which causes UnsatisfiedLinkError
+# at runtime. We omit the version script so the JNI methods are exported and the
+# Java API works. Functionally safe: it only exports extra symbols.
+
