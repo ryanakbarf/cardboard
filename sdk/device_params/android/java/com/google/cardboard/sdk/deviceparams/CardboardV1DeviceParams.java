@@ -30,7 +30,9 @@ public final class CardboardV1DeviceParams {
           CardboardDevice.DeviceParams.VerticalAlignmentType.BOTTOM;
   public static final float CARDBOARD_V1_TRAY_TO_LENS_CENTER_DISTANCE = 0.035f;
   public static final float[] CARDBOARD_V1_DISTORTION_COEFFS = {0.441f, 0.156f};
-  public static final float[] CARDBOARD_V1_FOV_ANGLES = {40.0f, 40.0f, 40.0f, 40.0f};
+  // Patched for vision_pro: the stock 40° fallback leaves large unused black bands on modern
+  // phones. 54° fills the lens area edge-to-edge (only used when no viewer QR has been scanned).
+  public static final float[] CARDBOARD_V1_FOV_ANGLES = {54.0f, 54.0f, 54.0f, 54.0f};
 
   private CardboardV1DeviceParams() {
   }
